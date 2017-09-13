@@ -6,8 +6,8 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 
-	<name>Gavaghan Maven Plugin for Thirft</name>
-	<description>Thrift source generator</description>
+	<name>thrift-maven-plugin</name>
+	<description>Maven Plugin for Thrift</description>
 	<url>http://maven.apache.org</url>
 
 	<licenses>
