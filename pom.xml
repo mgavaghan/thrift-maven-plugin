@@ -6,7 +6,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 
-	<name>Gavaghan Maven Plugin for Generating Code from a Thirft IDL</name>
+	<name>Gavaghan Maven Plugin for Thirft</name>
 	<description>Thrift source generator</description>
 	<url>http://maven.apache.org</url>
 
@@ -26,7 +26,11 @@
 		</developer>
 	</developers>
 
-	<!-- <scm> <connection>scm:git:git://github.com/mgavaghan/gavaghan-thrift.git</connection> <developerConnection>scm:git:ssh://github.com:mgavaghan/gavaghan-thrift.git</developerConnection> <url>http://github.com/mgavaghan/gavaghan-thrift/tree/master</url> </scm> -->
+	<scm>
+		<connection>scm:git:git://github.com/mgavaghan/thrift-maven-plugin.git</connection>
+		<developerConnection>scm:git:ssh://github.com:mgavaghan/thrift-maven-plugin.git</developerConnection>
+		<url>http://github.com/mgavaghan/thrift-maven-plugin/tree/master</url>
+	</scm>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

@@ -24,10 +24,10 @@ public class GenerateMojo extends AbstractMojo
 {
 	/** Build subdirectory for generated files. */
 	static public final String GEN_FOLDER = "thrift";
-	
+
 	/** Build subdirectory for generated test files. */
 	static public final String GEN_TEST_FOLDER = "test-thrift";
-	
+
 	/** Path to the thrift compiler executable (if no path, use system path). */
 	@Parameter(alias = "executable", required = true)
 	private String mExecutable;
@@ -44,6 +44,20 @@ public class GenerateMojo extends AbstractMojo
 		getLog().info("Using thrift compiler: " + mExecutable);
 		getLog().debug("Source folder: " + build.getSourceDirectory());
 		getLog().debug("Test folder: " + build.getTestSourceDirectory());
+
+		// look at source roots
+		List<String> sourceRoots = maven.getCompileSourceRoots();
+		for (String root : sourceRoots)
+		{
+			getLog().debug("Source root: " + root);
+		}
+
+		// look at test source roots
+		List<String> testSourceRoots = maven.getTestCompileSourceRoots();
+		for (String root : testSourceRoots)
+		{
+			getLog().debug("Test source root: " + root);
+		}
 	}
 
 	/*
@@ -69,6 +83,11 @@ public class GenerateMojo extends AbstractMojo
 
 		try
 		{
+			// add to source roots
+			maven.getCompileSourceRoots().add(sourceGen.getCanonicalPath());
+			maven.getTestCompileSourceRoots().add(testGen.getCanonicalPath());
+
+			// dive through IDL folders
 			searchIDLFolder(build, sourceIDL, sourceGen);
 			searchIDLFolder(build, testIDL, testGen);
 		}
@@ -81,9 +100,12 @@ public class GenerateMojo extends AbstractMojo
 	/**
 	 * Recursively dive through the IDL folder looking for *.thrift files.
 	 * 
-	 * @param build project Build object
-	 * @param folder folder to scan for IDL files
-	 * @param gen target folder for generated source
+	 * @param build
+	 *           project Build object
+	 * @param folder
+	 *           folder to scan for IDL files
+	 * @param gen
+	 *           target folder for generated source
 	 * @throws IOException
 	 * @throws MojoExecutionException
 	 */
@@ -108,9 +130,12 @@ public class GenerateMojo extends AbstractMojo
 	/**
 	 * Generate source from an IDL.
 	 * 
-	 * @param build project Build object
-	 * @param idl IDL file to generate source for
-	 * @param gen target folder for generated source
+	 * @param build
+	 *           project Build object
+	 * @param idl
+	 *           IDL file to generate source for
+	 * @param gen
+	 *           target folder for generated source
 	 * @throws IOException
 	 * @throws MojoExecutionException
 	 */
@@ -124,31 +149,37 @@ public class GenerateMojo extends AbstractMojo
 		List<String> command = buildCommandLine(build, idl, gen);
 
 		// execute the generator
-		if (true)
+		ProcessBuilder pb = new ProcessBuilder(command);
+		pb.inheritIO();
+
+		getLog().debug("Launching: " + mExecutable);
+		
+		Process pr = pb.start();
+		int retval;
+
+		try
 		{
-			ProcessBuilder pb = new ProcessBuilder(command);
-			pb.inheritIO();
-
-			Process pr = pb.start();
-			int retval;
-
-			try
-			{
-				retval = pr.waitFor();
-				if (retval != 0) throw new MojoExecutionException("Source generation return with error code: " + retval);
-			}
-			catch (InterruptedException xce)
-			{
-				throw new MojoExecutionException("Source generation was unexpectedly interrupted");
-			}
+			getLog().debug("Waiting for compiler to return");
+			retval = pr.waitFor();
+			getLog().debug("Compiler has returned with code: " + retval);
 		}
+		catch (InterruptedException xce)
+		{
+			throw new MojoExecutionException("Source generation was unexpectedly interrupted");
+		}
+
+		if (retval != 0) throw new MojoExecutionException("Source generation return with error code: " + retval);
 	}
 
 	/**
 	 * Build the command line to the Thrift compiler
-	 * @param build project Build object
-	 * @param idl IDL file to generate source for
-	 * @param gen target folder for generated source
+	 * 
+	 * @param build
+	 *           project Build object
+	 * @param idl
+	 *           IDL file to generate source for
+	 * @param gen
+	 *           target folder for generated source
 	 * @return
 	 * @throws IOException
 	 * @throws MojoExecutionException
@@ -159,19 +190,19 @@ public class GenerateMojo extends AbstractMojo
 
 		// call the executable
 		cmd.add(mExecutable);
-		
+
 		// recurse through includes
 		cmd.add("-r");
-		
+
 		// select output folder
 		cmd.add("-out");
-		
+
 		if (!gen.mkdirs())
 		{
 			throw new MojoExecutionException("Unable to create output folder: " + gen.getCanonicalPath());
 		}
 		getLog().info("Output folder: " + gen.getCanonicalPath());
-		
+
 		cmd.add(gen.getCanonicalPath());
 
 		// generate java
