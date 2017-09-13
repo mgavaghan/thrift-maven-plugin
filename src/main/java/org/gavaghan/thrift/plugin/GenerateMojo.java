@@ -15,12 +15,19 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
 /**
+ * Mojo to generate source code from Thrift IDL files.
  * 
  * @author <a href="mailto:mike@gavaghan.org">Mike Gavaghan</a>
  */
 @Mojo(name = "generate")
 public class GenerateMojo extends AbstractMojo
 {
+	/** Build subdirectory for generated files. */
+	static public final String GEN_FOLDER = "thrift";
+	
+	/** Build subdirectory for generated test files. */
+	static public final String GEN_TEST_FOLDER = "test-thrift";
+	
 	/** Path to the thrift compiler executable (if no path, use system path). */
 	@Parameter(alias = "executable", required = true)
 	private String mExecutable;
@@ -51,15 +58,19 @@ public class GenerateMojo extends AbstractMojo
 		MavenProject maven = (MavenProject) context.get("project");
 		Build build = maven.getBuild();
 
+		// log settings from pom
 		logSettings(maven);
 
+		// calculate path to IDLs
 		File sourceIDL = new File(new File(build.getSourceDirectory()).getParent(), "thrift");
+		File sourceGen = new File(build.getDirectory(), GEN_FOLDER);
 		File testIDL = new File(new File(build.getTestSourceDirectory()).getParent(), "thrift");
+		File testGen = new File(build.getDirectory(), GEN_TEST_FOLDER);
 
 		try
 		{
-			searchIDLFolder(build, sourceIDL);
-			searchIDLFolder(build, testIDL);
+			searchIDLFolder(build, sourceIDL, sourceGen);
+			searchIDLFolder(build, testIDL, testGen);
 		}
 		catch (IOException exc)
 		{
@@ -70,12 +81,13 @@ public class GenerateMojo extends AbstractMojo
 	/**
 	 * Recursively dive through the IDL folder looking for *.thrift files.
 	 * 
-	 * @param build
-	 * @param folder
+	 * @param build project Build object
+	 * @param folder folder to scan for IDL files
+	 * @param gen target folder for generated source
 	 * @throws IOException
 	 * @throws MojoExecutionException
 	 */
-	private void searchIDLFolder(Build build, File folder) throws IOException, MojoExecutionException
+	private void searchIDLFolder(Build build, File folder, File gen) throws IOException, MojoExecutionException
 	{
 		getLog().info("Searching through IDL source folder: " + folder);
 		if (!folder.isDirectory() || !folder.canRead()) return;
@@ -84,11 +96,11 @@ public class GenerateMojo extends AbstractMojo
 		{
 			if (file.isDirectory())
 			{
-				searchIDLFolder(build, file);
+				searchIDLFolder(build, file, gen);
 			}
 			else if (file.getName().toLowerCase().endsWith(".thrift"))
 			{
-				generate(build, file);
+				generate(build, file, gen);
 			}
 		}
 	}
@@ -96,19 +108,20 @@ public class GenerateMojo extends AbstractMojo
 	/**
 	 * Generate source from an IDL.
 	 * 
-	 * @param build
-	 * @param idl
+	 * @param build project Build object
+	 * @param idl IDL file to generate source for
+	 * @param gen target folder for generated source
 	 * @throws IOException
 	 * @throws MojoExecutionException
 	 */
-	private void generate(Build build, File idl) throws IOException, MojoExecutionException
+	private void generate(Build build, File idl, File gen) throws IOException, MojoExecutionException
 	{
 		if (!idl.canExecute()) return;
 
 		getLog().info("Generating code from: " + idl);
 
 		// build the command line
-		List<String> command = buildCommandLine(build, idl);
+		List<String> command = buildCommandLine(build, idl, gen);
 
 		// execute the generator
 		if (true)
@@ -131,7 +144,16 @@ public class GenerateMojo extends AbstractMojo
 		}
 	}
 
-	private List<String> buildCommandLine(Build build, File idl) throws IOException, MojoExecutionException
+	/**
+	 * Build the command line to the Thrift compiler
+	 * @param build project Build object
+	 * @param idl IDL file to generate source for
+	 * @param gen target folder for generated source
+	 * @return
+	 * @throws IOException
+	 * @throws MojoExecutionException
+	 */
+	private List<String> buildCommandLine(Build build, File idl, File gen) throws IOException, MojoExecutionException
 	{
 		List<String> cmd = new ArrayList<String>();
 
@@ -142,17 +164,15 @@ public class GenerateMojo extends AbstractMojo
 		cmd.add("-r");
 		
 		// select output folder
-		// FIXME distinguish between test and source
 		cmd.add("-out");
 		
-		String outFolder = build.getDirectory() + "/thrift";
-		if (!new File(outFolder).mkdirs())
+		if (!gen.mkdirs())
 		{
-			throw new MojoExecutionException("Unable to create output folder: " + outFolder);
+			throw new MojoExecutionException("Unable to create output folder: " + gen.getCanonicalPath());
 		}
-		getLog().info("Output folder: " + outFolder);
+		getLog().info("Output folder: " + gen.getCanonicalPath());
 		
-		cmd.add(outFolder);
+		cmd.add(gen.getCanonicalPath());
 
 		// generate java
 		// TODO allow additional options
