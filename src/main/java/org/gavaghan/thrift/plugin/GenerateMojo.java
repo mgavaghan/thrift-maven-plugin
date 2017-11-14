@@ -200,7 +200,7 @@ public class GenerateMojo extends AbstractMojo
 
 		if (!gen.mkdirs())
 		{
-			throw new MojoExecutionException("Unable to create output folder: " + gen.getCanonicalPath());
+			if (!gen.exists())  throw new MojoExecutionException("Unable to create output folder: " + gen.getCanonicalPath());
 		}
 		getLog().info("Output folder: " + gen.getCanonicalPath());
 
